@@ -1,5 +1,71 @@
 # Predictive Thermal Management for Heavy-Duty Trucks (NMPC)
 
+This repository holds two applications of the same NMPC approach:
+
+1. **`battery_twin/`: AI-enabled digital twin for an electric truck's battery**
+   (entry for the VIT × ISHRAE *AI for Thermal Management: Digital Twin Challenge*,
+   application area *Battery Thermal Management*). See the next section.
+2. **`nmpc_thermal/`: diesel engine cooling NMPC** (the original Volvo project). See
+   [Diesel engine cooling NMPC](#diesel-engine-cooling-nmpc) below.
+
+## Digital Twin Challenge: e-truck battery thermal twin
+
+Open `demo/index.html` in any browser for the interactive demo. It works offline.
+
+The challenge pipeline, as implemented:
+
+| Stage | Implementation |
+|---|---|
+| Data from sensors | `battery_twin/model.py` `truth()`: a 540 kWh pack with effects the physics twin does not model (cold-plate ageing, chiller capacity loss in heat, heat leak from the e-drive), sampled with sensor noise |
+| Digital twin model | `physics()`: four-state electro-thermal model (cell core, cell surface, coolant, SOC), plus an EKF (`estimator.py`) that keeps it synchronised with the sensors and estimates the **unmeasured cell-core temperature** |
+| AI/ML prediction | `ml_residual.py`: a neural network trained on fleet-style logs learns the physics residual. It is rebuilt as a CasADi expression, so the NMPC optimises through the **hybrid physics + ML twin** |
+| Optimisation & control | `controllers.py` `TwinNMPC`: 40-min horizon over the route preview. Minimises cooling/heating energy and ageing, maximises charge accepted, under a soft temperature window and a hard limit. Five actuators: pump, chiller, radiator valve, fan, PTC heater |
+| Efficient operation | KPIs vs a rule-based BMS: thermal-system energy, energy accepted in a 30-min megawatt-charging stop, peak temperature, Arrhenius ageing index |
+
+Mission: a 40 t truck drives 80 min (with climbs), stops for 30 min at a 750 kW
+charger during the driver's break, then drives 40 min.
+
+```bash
+pip install -r requirements.txt
+python scripts/twin_train.py     # trains the ML residual (~30 s)
+python scripts/twin_run_all.py   # 3 climates x 3 controllers, rebuilds demo/index.html (~8 min)
+```
+
+**Results** (simulated; change against the rule-based BMS):
+
+| Scenario | Controller | Thermal energy | Charged in 30 min | Peak core | Ageing index |
+|---|---|---|---|---|---|
+| Summer 42 °C | Rule-based BMS | 10.00 kWh | 349.4 kWh | 39.3 °C | 1.51 |
+| | NMPC + physics twin | 8.07 kWh (−19 %) | 361.6 kWh (+3.5 %) | 38.0 °C | 1.60 |
+| | NMPC + AI hybrid twin | 8.41 kWh (−16 %) | 361.7 kWh (+3.5 %) | 38.0 °C | 1.61 |
+| Mild 22 °C | Rule-based BMS | 2.29 kWh | 355.0 kWh | 39.0 °C | 1.27 |
+| | NMPC + AI hybrid twin | 1.44 kWh (−37 %) | 359.9 kWh (+1.4 %) | 37.7 °C | 1.26 |
+| Winter −5 °C | Rule-based BMS | 7.99 kWh | 362.7 kWh | 34.8 °C | 0.90 |
+| | NMPC + AI hybrid twin | 6.86 kWh (−14 %) | 362.4 kWh | 34.1 °C | 0.86 |
+
+AI twin accuracy, as 60-minute free-run prediction RMSE on unseen data: surface
+0.93 → 0.50 K, coolant 1.17 → 0.42 K. The core-temperature virtual sensor is
+accurate to 0.2–0.5 K.
+
+How to read this:
+
+* **The NMPC gains** by pre-cooling before the charging stop and running the chiller
+  at partial load instead of in on/off bursts. In summer the pack accepts
+  12 kWh more in the same 30 minutes, using less cooling energy.
+* **The AI makes the twin 2–3× more accurate.** In closed loop its effect on the
+  KPIs is small here, because the EKF already corrects most of the model drift.
+  It matters more as the gap between model and pack grows.
+* **Trade-off:** in summer the NMPC runs the pack slightly warmer, so its ageing
+  index is about 6 % higher. `Weights.w_age` sets this balance.
+* **Solve time:** about 0.3 s per step for the physics twin and about 1 s for the
+  hybrid twin, against a 60 s control interval.
+* **All data is simulated** and the parameters are estimates. Real fleet or
+  test-rig data is the next step.
+
+---
+
+# Diesel engine cooling NMPC
+
 Volvo project: *Sustainable, Compact and Lightweight Thermal Management System for
 Heavy-Duty Trucks to Improve Fuel Economy and Reduce CO2 Emissions*.
 Sushanth Bibi, Ganishk Mohanraj, Saradia Mathur.
@@ -201,6 +267,10 @@ That only shows the pipeline works. It is not a validation against a real engine
 ## Repository layout
 
 ```
+battery_twin/        e-truck battery digital twin (model, EKF, ML residual, NMPC)
+demo/                interactive dashboard (index.html works offline)
+scripts/twin_*.py    train the ML twin, run all scenarios
+scripts/build_demo.py  rebuild the dashboard from results/twin/
 nmpc_thermal/
   params.py          physical parameters (placeholders until calibrated)
   model.py           nonlinear thermal model (CasADi), RK4 discretisation

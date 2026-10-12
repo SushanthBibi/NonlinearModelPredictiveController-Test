@@ -3,3 +3,4 @@ scipy>=1.11
 casadi>=3.6
 matplotlib>=3.8
 pytest>=8
+scikit-learn>=1.4

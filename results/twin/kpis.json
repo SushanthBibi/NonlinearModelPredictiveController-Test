@@ -1,0 +1,134 @@
+{
+  "summer": {
+    "Rule-based BMS": {
+      "thermal-system energy [kWh]": 9.999537584818686,
+      "  chiller compressor [kWh]": 9.56753758481869,
+      "  heater [kWh]": 0.0,
+      "  pump + fan [kWh]": 0.4319999999999999,
+      "energy charged in 30-min stop [kWh]": 349.38987282451325,
+      "SOC after charging [%]": 84.02890005827203,
+      "peak core temp [degC]": 39.3045296668586,
+      "min core temp while charging [degC]": 34.598363857713196,
+      "time core > 40 degC [min]": 0.0,
+      "ageing index [-] (1 = 25 degC)": 1.5100701415662858,
+      "core-temp estimate RMSE [K]": 0.6792658654734661,
+      "mean solve time [ms]": 0.0153655866643021
+    },
+    "NMPC + physics twin": {
+      "thermal-system energy [kWh]": 8.066355566335794,
+      "  chiller compressor [kWh]": 7.722163122697773,
+      "  heater [kWh]": 1.281634910333227e-05,
+      "  pump + fan [kWh]": 0.34417962728891743,
+      "energy charged in 30-min stop [kWh]": 361.603944371213,
+      "SOC after charging [%]": 86.2790952024318,
+      "peak core temp [degC]": 38.003226085135175,
+      "min core temp while charging [degC]": 32.28399489097871,
+      "time core > 40 degC [min]": 0.0,
+      "ageing index [-] (1 = 25 degC)": 1.5975097826785203,
+      "core-temp estimate RMSE [K]": 0.6039260810526497,
+      "mean solve time [ms]": 347.9319822600064
+    },
+    "NMPC + AI hybrid twin": {
+      "thermal-system energy [kWh]": 8.414145764656434,
+      "  chiller compressor [kWh]": 8.236188196797505,
+      "  heater [kWh]": 1.1937553807017026e-05,
+      "  pump + fan [kWh]": 0.17794563030512317,
+      "energy charged in 30-min stop [kWh]": 361.71311274202407,
+      "SOC after charging [%]": 86.25470251299127,
+      "peak core temp [degC]": 38.00236668592558,
+      "min core temp while charging [degC]": 32.134476594371336,
+      "time core > 40 degC [min]": 0.0,
+      "ageing index [-] (1 = 25 degC)": 1.6071586216326497,
+      "core-temp estimate RMSE [K]": 0.45964861124632517,
+      "mean solve time [ms]": 1128.4145428066722
+    }
+  },
+  "mild": {
+    "Rule-based BMS": {
+      "thermal-system energy [kWh]": 2.2865151032805806,
+      "  chiller compressor [kWh]": 1.753544694355616,
+      "  heater [kWh]": 0.0,
+      "  pump + fan [kWh]": 0.5329704089249642,
+      "energy charged in 30-min stop [kWh]": 354.94580633071763,
+      "SOC after charging [%]": 86.12195148657088,
+      "peak core temp [degC]": 39.00302254620456,
+      "min core temp while charging [degC]": 28.67663187381654,
+      "time core > 40 degC [min]": 0.0,
+      "ageing index [-] (1 = 25 degC)": 1.2677561954594105,
+      "core-temp estimate RMSE [K]": 0.3258206188378535,
+      "mean solve time [ms]": 0.031001246669954224
+    },
+    "NMPC + physics twin": {
+      "thermal-system energy [kWh]": 1.426871190647502,
+      "  chiller compressor [kWh]": 1.1882694065589936,
+      "  heater [kWh]": 1.3563190848842432e-05,
+      "  pump + fan [kWh]": 0.23858822089765952,
+      "energy charged in 30-min stop [kWh]": 359.88997275421076,
+      "SOC after charging [%]": 87.13180949502959,
+      "peak core temp [degC]": 37.688101329359974,
+      "min core temp while charging [degC]": 27.51114024950973,
+      "time core > 40 degC [min]": 0.0,
+      "ageing index [-] (1 = 25 degC)": 1.2602690199515325,
+      "core-temp estimate RMSE [K]": 0.26022083983749084,
+      "mean solve time [ms]": 139.92648747333607
+    },
+    "NMPC + AI hybrid twin": {
+      "thermal-system energy [kWh]": 1.4437792584741287,
+      "  chiller compressor [kWh]": 1.2297353982328487,
+      "  heater [kWh]": 1.5328584353628744e-05,
+      "  pump + fan [kWh]": 0.2140285316569265,
+      "energy charged in 30-min stop [kWh]": 359.9260791402928,
+      "SOC after charging [%]": 87.13558121544652,
+      "peak core temp [degC]": 37.70240123577789,
+      "min core temp while charging [degC]": 27.506917780525868,
+      "time core > 40 degC [min]": 0.0,
+      "ageing index [-] (1 = 25 degC)": 1.2591720614726531,
+      "core-temp estimate RMSE [K]": 0.2242462393448365,
+      "mean solve time [ms]": 646.2121498333348
+    }
+  },
+  "winter": {
+    "Rule-based BMS": {
+      "thermal-system energy [kWh]": 7.990333333333334,
+      "  chiller compressor [kWh]": 0.0,
+      "  heater [kWh]": 6.6,
+      "  pump + fan [kWh]": 1.390333333333333,
+      "energy charged in 30-min stop [kWh]": 362.699364830425,
+      "SOC after charging [%]": 86.5107431979866,
+      "peak core temp [degC]": 34.842664682963495,
+      "min core temp while charging [degC]": 19.03177043223578,
+      "time core > 40 degC [min]": 0.0,
+      "ageing index [-] (1 = 25 degC)": 0.903536879228169,
+      "core-temp estimate RMSE [K]": 0.35787325445112855,
+      "mean solve time [ms]": 0.021924273332084947
+    },
+    "NMPC + physics twin": {
+      "thermal-system energy [kWh]": 6.870753486258884,
+      "  chiller compressor [kWh]": 4.597582781325502e-05,
+      "  heater [kWh]": 6.3269526394963895,
+      "  pump + fan [kWh]": 0.5437548709346819,
+      "energy charged in 30-min stop [kWh]": 362.37514801464584,
+      "SOC after charging [%]": 86.59021718966513,
+      "peak core temp [degC]": 34.14013436505939,
+      "min core temp while charging [degC]": 18.704140548717938,
+      "time core > 40 degC [min]": 0.0,
+      "ageing index [-] (1 = 25 degC)": 0.8655508915004274,
+      "core-temp estimate RMSE [K]": 0.4158228811056181,
+      "mean solve time [ms]": 220.44108828000088
+    },
+    "NMPC + AI hybrid twin": {
+      "thermal-system energy [kWh]": 6.8602720726821795,
+      "  chiller compressor [kWh]": 2.453221929369843e-05,
+      "  heater [kWh]": 6.306856627155192,
+      "  pump + fan [kWh]": 0.5533909133076951,
+      "energy charged in 30-min stop [kWh]": 362.3559069025411,
+      "SOC after charging [%]": 86.58913998082075,
+      "peak core temp [degC]": 34.09445875696778,
+      "min core temp while charging [degC]": 18.66507216388589,
+      "time core > 40 degC [min]": 0.0,
+      "ageing index [-] (1 = 25 degC)": 0.8636862374572296,
+      "core-temp estimate RMSE [K]": 0.3527887210064457,
+      "mean solve time [ms]": 633.0449739599976
+    }
+  }
+}

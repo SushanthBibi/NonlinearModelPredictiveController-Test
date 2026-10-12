@@ -1,0 +1,545 @@
+<title>E-Truck Battery Thermal Twin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: operator console. Sticky control bar, route strip with look-ahead window,
+   live pipeline (sensors -> twin -> AI -> NMPC -> operation), comparison charts, KPI table. */
+:root {
+  --bg: #f3f6f7;
+  --panel: #ffffff;
+  --ink: #15212b;
+  --muted: #5b6b78;
+  --line: #d5dee3;
+  --grid: #e6ecef;
+  --cool: #0e7c86;        /* coolant / accent */
+  --heat: #d2541b;        /* heat, limits */
+  --band: rgba(14, 124, 134, .09);
+  --charge: rgba(210, 160, 30, .14);
+  --look: rgba(14, 124, 134, .12);
+  --c-rule: #8b95a0;
+  --c-phys: #3a63c9;
+  --c-ai: #0e7c86;
+  --good: #1d7a46;
+  --bad: #b3361b;
+  --chip-good: rgba(29, 122, 70, .12);
+  --chip-bad: rgba(179, 54, 27, .12);
+  --f-display: "Barlow Condensed", "Arial Narrow", "Roboto Condensed", sans-serif;
+  --f-body: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --f-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f1619; --panel: #162126; --ink: #e3ecef; --muted: #93a5ae; --line: #26363d; --grid: #1f2c31;
+    --cool: #3cc3c9; --heat: #f07a42; --band: rgba(60, 195, 201, .10); --charge: rgba(230, 180, 60, .13);
+    --look: rgba(60, 195, 201, .14); --c-rule: #8794a0; --c-phys: #7c9cf0; --c-ai: #3cc3c9;
+    --good: #5cc98a; --bad: #f08a6a; --chip-good: rgba(92, 201, 138, .14); --chip-bad: rgba(240, 138, 106, .14);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0f1619; --panel: #162126; --ink: #e3ecef; --muted: #93a5ae; --line: #26363d; --grid: #1f2c31;
+  --cool: #3cc3c9; --heat: #f07a42; --band: rgba(60, 195, 201, .10); --charge: rgba(230, 180, 60, .13);
+  --look: rgba(60, 195, 201, .14); --c-rule: #8794a0; --c-phys: #7c9cf0; --c-ai: #3cc3c9;
+  --good: #5cc98a; --bad: #f08a6a; --chip-good: rgba(92, 201, 138, .14); --chip-bad: rgba(240, 138, 106, .14);
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font-family: var(--f-body); font-size: 14px; line-height: 1.5; }
+.wrap { max-width: 1240px; margin: 0 auto; padding-inline: 20px; padding-block: 0 48px; }
+h1, h2, h3 { font-family: var(--f-display); font-weight: 600; letter-spacing: .01em; text-wrap: balance; margin: 0; }
+h1 { font-size: clamp(26px, 4vw, 38px); line-height: 1.05; }
+h2 { font-size: 20px; text-transform: uppercase; letter-spacing: .06em; }
+h3 { font-size: 16px; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); font-weight: 600; }
+.num, .mono { font-family: var(--f-mono); font-variant-numeric: tabular-nums; }
+p { margin: 0; }
+.lede { color: var(--muted); max-width: 70ch; }
+
+header.top { padding-block: 22px 14px; display: grid; gap: 8px; }
+.eyebrow { font-family: var(--f-display); font-size: 14px; text-transform: uppercase; letter-spacing: .14em; color: var(--cool); font-weight: 600; }
+
+/* sticky control bar */
+.bar { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--bg);
+       border-bottom: 1px solid var(--line); padding-block: 10px; display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; background: var(--panel); }
+.seg button { font: 500 13px var(--f-body); color: var(--muted); background: transparent; border: 0; padding: 7px 12px; cursor: pointer; }
+.seg button + button { border-left: 1px solid var(--line); }
+.seg button[aria-pressed="true"] { background: var(--cool); color: var(--panel); }
+.seg button:focus-visible, .play:focus-visible, input[type=range]:focus-visible { outline: 2px solid var(--cool); outline-offset: 2px; }
+.play { font: 600 13px var(--f-body); border: 1px solid var(--cool); color: var(--cool); background: var(--panel); border-radius: 6px; padding: 7px 14px; cursor: pointer; min-width: 84px; }
+.scrub { display: flex; align-items: center; gap: 10px; flex: 1 1 260px; min-width: 0; }
+.scrub input { flex: 1; min-width: 0; accent-color: var(--cool); }
+.clock { font-family: var(--f-mono); font-size: 13px; white-space: nowrap; }
+.label { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; }
+
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 16px; min-width: 0; }
+.grid { display: grid; gap: 14px; }
+section { margin-top: 18px; display: grid; gap: 12px; }
+.sec-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 6px 16px; }
+.sec-head p { color: var(--muted); font-size: 13px; }
+
+/* route strip */
+.route-meta { display: flex; flex-wrap: wrap; gap: 6px 22px; font-size: 13px; }
+.route-meta b { font-family: var(--f-mono); font-weight: 500; }
+.status-pill { display: inline-block; font: 600 12px var(--f-body); letter-spacing: .05em; text-transform: uppercase; padding: 2px 9px; border-radius: 99px; background: var(--chip-good); color: var(--good); }
+.status-pill.charging { background: var(--charge); color: var(--ink); }
+
+/* pipeline */
+.pipe { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; position: relative; }
+.stage { display: grid; gap: 8px; align-content: start; position: relative; }
+.stage .tag { font-family: var(--f-display); font-size: 13px; letter-spacing: .1em; text-transform: uppercase; color: var(--cool); font-weight: 600; }
+.stage h4 { margin: 0; font: 600 15px var(--f-body); }
+.stage .sub { font-size: 12px; color: var(--muted); }
+.stage:not(:last-child)::after { content: ""; position: absolute; right: -9px; top: 22px; width: 8px; height: 8px;
+  border-top: 2px solid var(--line); border-right: 2px solid var(--line); transform: rotate(45deg); }
+.kv { display: grid; grid-template-columns: 1fr auto; gap: 2px 8px; font-size: 13px; }
+.kv span:nth-child(odd) { color: var(--muted); }
+.kv span:nth-child(even) { font-family: var(--f-mono); text-align: right; }
+.meter { display: grid; grid-template-columns: 52px 1fr 38px; gap: 6px; align-items: center; font-size: 12px; }
+.meter .trk { height: 7px; background: var(--grid); border-radius: 4px; overflow: hidden; }
+.meter .fill { height: 100%; background: var(--cool); width: 0; }
+.meter .fill.hot { background: var(--heat); }
+.meter .v { font-family: var(--f-mono); text-align: right; }
+
+/* thermometers */
+.thermo { display: grid; gap: 7px; }
+.th-row { display: grid; grid-template-columns: 116px 1fr 54px; gap: 8px; align-items: center; font-size: 12.5px; }
+.th-row .trk { position: relative; height: 12px; background: var(--grid); border-radius: 6px; overflow: hidden; }
+.th-row .bandmark { position: absolute; top: 0; bottom: 0; background: var(--band); border-left: 1px dashed var(--cool); border-right: 1px dashed var(--cool); }
+.th-row .dot { position: absolute; top: 1px; width: 10px; height: 10px; border-radius: 50%; transform: translateX(-5px); }
+.th-row .v { font-family: var(--f-mono); text-align: right; }
+
+/* charts */
+.charts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.chart svg { width: 100%; height: auto; display: block; overflow: visible; }
+.chart text { fill: var(--muted); font: 10.5px var(--f-mono); }
+.legend { display: flex; flex-wrap: wrap; gap: 4px 16px; font-size: 12.5px; }
+.legend i { display: inline-block; width: 18px; height: 3px; border-radius: 2px; vertical-align: middle; margin-right: 6px; }
+
+/* KPI table */
+.tbl-wrap { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; min-width: 640px; font-size: 13px; }
+th, td { padding: 8px 10px; border-bottom: 1px solid var(--line); text-align: right; white-space: nowrap; }
+th:first-child, td:first-child { text-align: left; white-space: normal; }
+thead th { font: 600 12px var(--f-body); color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
+td.num { font-family: var(--f-mono); }
+.chip { display: inline-block; margin-left: 6px; font: 500 11px var(--f-mono); padding: 1px 6px; border-radius: 4px; }
+.chip.good { background: var(--chip-good); color: var(--good); }
+.chip.bad { background: var(--chip-bad); color: var(--bad); }
+.chip.same { color: var(--muted); }
+
+.two { grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); }
+.mlbars { display: grid; gap: 10px; }
+.mlrow { display: grid; grid-template-columns: 120px 1fr 52px; gap: 8px; align-items: center; font-size: 12.5px; }
+.mlrow .trk { height: 14px; background: var(--grid); border-radius: 3px; overflow: hidden; }
+.mlrow .fill { height: 100%; }
+.note { font-size: 12.5px; color: var(--muted); max-width: 80ch; }
+.note b { color: var(--ink); font-weight: 600; }
+ul.plain { margin: 0; padding-left: 18px; display: grid; gap: 4px; }
+
+@media (max-width: 960px) {
+  .pipe { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .stage::after { display: none; }
+  .charts, .two { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 520px) {
+  .wrap { padding-inline: 16px; }
+  .pipe { grid-template-columns: minmax(0, 1fr); }
+  .th-row { grid-template-columns: 96px 1fr 50px; }
+}
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div class="eyebrow">AI for Thermal Management · Digital Twin Challenge</div>
+    <h1>Predictive battery thermal management for a 40-tonne electric truck</h1>
+    <p class="lede">A digital twin of a 540 kWh pack, kept in sync with its sensors, corrected by a neural network, and driven by a nonlinear model predictive controller (NMPC) that reads the route 40 minutes ahead. It is compared with a conventional rule-based BMS on the same simulated truck.</p>
+  </header>
+
+  <div class="bar" role="toolbar" aria-label="Simulation controls">
+    <div class="seg" id="scenarioSeg" aria-label="Climate scenario"></div>
+    <button class="play" id="playBtn" type="button">Play</button>
+    <div class="scrub">
+      <input type="range" id="scrub" min="0" max="299" value="0" aria-label="Mission time">
+      <span class="clock" id="clock">t = 0 min</span>
+    </div>
+    <div class="seg" id="ctrlSeg" aria-label="Controller shown in the live view"></div>
+  </div>
+
+  <section>
+    <div class="sec-head">
+      <h2>Route ahead</h2>
+      <div class="route-meta">
+        <span>Status <span class="status-pill" id="status">Driving</span></span>
+        <span>Speed <b id="rmSpeed">–</b></span>
+        <span>Traction power <b id="rmPower">–</b></span>
+        <span>Charger <b id="rmCharger">–</b></span>
+      </div>
+    </div>
+    <div class="panel chart" id="routeChart"></div>
+    <p class="note">Solid line: traction power drawn from the pack (kW, negative is regenerative braking). Dashed: charger power available. Shaded teal: the 40-minute look-ahead window the NMPC optimises over at each step. Gold: the 30-minute megawatt-charging stop during the driver's break. The rule-based BMS sees only the current temperatures.</p>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <h2>Live twin pipeline</h2>
+      <p id="pipeCaption">Showing: NMPC + AI hybrid twin</p>
+    </div>
+    <div class="pipe">
+      <div class="panel stage">
+        <span class="tag">1 · Sensors</span>
+        <h4>What the pack reports</h4>
+        <div class="kv">
+          <span>Cell surface</span><span id="sTs">–</span>
+          <span>Coolant</span><span id="sTw">–</span>
+          <span>State of charge</span><span id="sSoc">–</span>
+        </div>
+        <p class="sub">Noisy readings (±0.1 K, ±0.3 % SOC) every 60 s.</p>
+      </div>
+      <div class="panel stage">
+        <span class="tag">2 · Digital twin</span>
+        <h4>Virtual core sensor</h4>
+        <div class="kv">
+          <span>Core, twin estimate</span><span id="tCh">–</span>
+          <span>Core, true (hidden)</span><span id="tC">–</span>
+          <span>Estimate error</span><span id="tErr">–</span>
+        </div>
+        <p class="sub">An extended Kalman filter fuses the model with the sensors to estimate the unmeasured cell-core temperature.</p>
+      </div>
+      <div class="panel stage">
+        <span class="tag">3 · AI / ML</span>
+        <h4>Learned model correction</h4>
+        <div class="kv">
+          <span>Training samples</span><span id="mlN">–</span>
+          <span>60-min error, physics</span><span id="mlP">–</span>
+          <span>60-min error, hybrid</span><span id="mlH">–</span>
+        </div>
+        <p class="sub">A neural network learns where the physics is wrong: cold-plate ageing, chiller loss in heat, e-drive heat leak.</p>
+      </div>
+      <div class="panel stage">
+        <span class="tag">4 · NMPC</span>
+        <h4>Actuator commands</h4>
+        <div id="meters" class="grid" style="gap:6px"></div>
+      </div>
+      <div class="panel stage">
+        <span class="tag">5 · Operation</span>
+        <h4>Result right now</h4>
+        <div class="kv">
+          <span>Cooling/heating power</span><span id="oPth">–</span>
+          <span>Charge accepted</span><span id="oChg">–</span>
+          <span>Ageing rate (25 °C = 1)</span><span id="oAge">–</span>
+          <span>Thermal energy so far</span><span id="oE">–</span>
+        </div>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="sec-head" style="margin-bottom:10px">
+        <h3>Pack thermal state</h3>
+        <span class="label">Shaded band: preferred window 18–38 °C</span>
+      </div>
+      <div class="thermo" id="thermo"></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <h2>Three controllers, same truck</h2>
+      <div class="legend" id="legend"></div>
+    </div>
+    <div class="grid charts">
+      <div class="panel chart"><h3>Cell core temperature, °C</h3><div id="chTc"></div></div>
+      <div class="panel chart"><h3>Charge power accepted, kW</h3><div id="chChg"></div></div>
+      <div class="panel chart"><h3>Cooling + heating power, kW</h3><div id="chPth"></div></div>
+      <div class="panel chart"><h3>Thermal-system energy used, kWh</h3><div id="chE"></div></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <h2>Results for this scenario</h2>
+      <p>Chips show the change against the rule-based BMS; green is better.</p>
+    </div>
+    <div class="panel tbl-wrap"><table id="kpiTable"></table></div>
+  </section>
+
+  <section class="grid two">
+    <div class="panel grid" style="gap:12px">
+      <h3>Does the AI help the twin predict?</h3>
+      <p class="note">Error of 60-minute free-running predictions on driving data the network never saw (RMSE, K). Lower is better.</p>
+      <div class="mlbars" id="mlBars"></div>
+    </div>
+    <div class="panel grid" style="gap:10px">
+      <h3>What this demo is and is not</h3>
+      <ul class="plain note">
+        <li><b>All data is simulated.</b> A "real" pack model with deliberate differences from the physics twin stands in for a truck. Parameters are engineering estimates, not measured Volvo data.</li>
+        <li><b>Where the NMPC gains:</b> it pre-cools before the charging stop and runs the chiller gently instead of in on/off bursts, so the pack accepts more charge with less cooling energy.</li>
+        <li><b>Where the AI gains:</b> the hybrid twin predicts 2–3× more accurately. In closed loop the gain is small here, because the Kalman filter already corrects most of the drift.</li>
+        <li><b>Trade-off:</b> in summer the NMPC runs the pack a little warmer than the rule-based BMS, so its ageing index is slightly higher. The weights in the cost function set this balance.</li>
+      </ul>
+    </div>
+  </section>
+</div>
+
+<script>window.TWIN_DATA = /*__DATA__*/null;</script>
+<script>
+(function () {
+  const D = window.TWIN_DATA;
+  const $ = (id) => document.getElementById(id);
+  const css = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+  const CTRL_VAR = { rule: "--c-rule", nmpc_phys: "--c-phys", nmpc_ai: "--c-ai" };
+  const CTRL_DASH = { rule: "5 4", nmpc_phys: "", nmpc_ai: "" };
+  const LOOKAHEAD_MIN = 40;
+  const state = { sc: 0, ctrl: "nmpc_ai", i: 0, playing: false };
+
+  // ---------- small SVG chart helper ----------
+  const NS = "http://www.w3.org/2000/svg";
+  function el(tag, attrs, parent) {
+    const e = document.createElementNS(NS, tag);
+    for (const k in attrs) e.setAttribute(k, attrs[k]);
+    if (parent) parent.appendChild(e);
+    return e;
+  }
+  function niceTicks(lo, hi, n) {
+    const span = hi - lo, raw = span / n, mag = Math.pow(10, Math.floor(Math.log10(raw)));
+    const step = [1, 2, 2.5, 5, 10].map((m) => m * mag).find((s) => span / s <= n) || 10 * mag;
+    const out = [];
+    for (let v = Math.ceil(lo / step) * step; v <= hi + 1e-9; v += step) out.push(+v.toFixed(6));
+    return out;
+  }
+  function chart(host, opt) {
+    host.innerHTML = "";
+    const W = Math.max(300, Math.round(host.clientWidth || 640)), H = opt.height || 210, m = { l: 44, r: 12, t: 10, b: 24 };
+    const svg = el("svg", { viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": opt.aria || "" }, host);
+    const t = opt.t, x0 = t[0], x1 = t[t.length - 1];
+    let [y0, y1] = opt.y;
+    const X = (v) => m.l + (v - x0) / (x1 - x0) * (W - m.l - m.r);
+    const Y = (v) => H - m.b - (v - y0) / (y1 - y0) * (H - m.t - m.b);
+    if (opt.shade) for (const s of opt.shade)
+      el("rect", { x: X(s[0]), y: m.t, width: Math.max(0, X(s[1]) - X(s[0])), height: H - m.t - m.b, fill: css(s[2]) }, svg);
+    if (opt.band) el("rect", { x: m.l, y: Y(opt.band[1]), width: W - m.l - m.r, height: Y(opt.band[0]) - Y(opt.band[1]), fill: css("--band") }, svg);
+    for (const v of niceTicks(y0, y1, 4)) {
+      el("line", { x1: m.l, x2: W - m.r, y1: Y(v), y2: Y(v), stroke: css("--grid"), "stroke-width": 1 }, svg);
+      el("text", { x: m.l - 6, y: Y(v) + 3.5, "text-anchor": "end" }, svg).textContent = v;
+    }
+    for (const v of niceTicks(x0, x1, 6)) {
+      el("text", { x: X(v), y: H - 7, "text-anchor": "middle" }, svg).textContent = v + (v === 0 ? " min" : "");
+    }
+    if (opt.hline) for (const h of opt.hline) {
+      el("line", { x1: m.l, x2: W - m.r, y1: Y(h.v), y2: Y(h.v), stroke: css(h.color), "stroke-dasharray": "3 3", "stroke-width": 1.2 }, svg);
+      el("text", { x: W - m.r - 2, y: Y(h.v) - 4, "text-anchor": "end", style: `fill:${css(h.color)}` }, svg).textContent = h.label;
+    }
+    for (const s of opt.series) {
+      let d = "";
+      s.v.forEach((v, k) => { d += (k ? "L" : "M") + X(t[k]).toFixed(1) + "," + Y(Math.max(y0, Math.min(y1, v))).toFixed(1); });
+      if (s.area) el("path", { d: d + `L${X(x1)},${Y(y0)}L${X(x0)},${Y(y0)}Z`, fill: css(s.color), opacity: .16 }, svg);
+      el("path", { d, fill: "none", stroke: css(s.color), "stroke-width": s.w || 1.8, "stroke-dasharray": s.dash || "", "stroke-linejoin": "round" }, svg);
+    }
+    const cur = el("line", { y1: m.t, y2: H - m.b, stroke: css("--ink"), "stroke-width": 1, opacity: .55 }, svg);
+    const dots = opt.series.filter((s) => !s.nodot).map((s) => ({ s, c: el("circle", { r: 3.6, fill: css(s.color), stroke: css("--panel"), "stroke-width": 1.5 }, svg) }));
+    let look = null;
+    if (opt.look) look = el("rect", { y: m.t, height: H - m.t - m.b, fill: css("--look") }, svg);
+    return {
+      move(i) {
+        const xv = X(t[i]);
+        cur.setAttribute("x1", xv); cur.setAttribute("x2", xv);
+        dots.forEach(({ s, c }) => { c.setAttribute("cx", xv); c.setAttribute("cy", Y(Math.max(y0, Math.min(y1, s.v[i])))); });
+        if (look) { const xe = X(Math.min(x1, t[i] + LOOKAHEAD_MIN)); look.setAttribute("x", xv); look.setAttribute("width", Math.max(0, xe - xv)); }
+      },
+    };
+  }
+
+  // ---------- derived series ----------
+  function cumulative(v, dtMin) { let a = 0; return v.map((p) => (a += p * dtMin / 60)); }
+
+  let charts = [];
+  function sc() { return D.scenarios[state.sc]; }
+
+  function buildControls() {
+    const segS = $("scenarioSeg");
+    D.scenarios.forEach((s, k) => {
+      const b = document.createElement("button");
+      b.type = "button"; b.id = "sc-" + s.key; b.textContent = s.label;
+      b.addEventListener("click", () => { state.sc = k; render(); });
+      segS.appendChild(b);
+    });
+    const segC = $("ctrlSeg");
+    const short = { rule: "Rule-based", nmpc_phys: "NMPC physics", nmpc_ai: "NMPC + AI" };
+    D.controllers.forEach((c) => {
+      const b = document.createElement("button");
+      b.type = "button"; b.id = "ctrl-" + c.key; b.textContent = short[c.key] || c.name;
+      b.addEventListener("click", () => { state.ctrl = c.key; updateLive(); markPressed(); });
+      segC.appendChild(b);
+    });
+    const lg = $("legend");
+    D.controllers.forEach((c) => {
+      const s = document.createElement("span");
+      s.innerHTML = `<i style="background:var(${CTRL_VAR[c.key]})"></i>${c.name}`;
+      lg.appendChild(s);
+    });
+    $("playBtn").addEventListener("click", togglePlay);
+    $("scrub").addEventListener("input", (e) => { state.i = +e.target.value; moveAll(); });
+  }
+
+  function markPressed() {
+    D.scenarios.forEach((s, k) => $("sc-" + s.key).setAttribute("aria-pressed", k === state.sc));
+    D.controllers.forEach((c) => $("ctrl-" + c.key).setAttribute("aria-pressed", c.key === state.ctrl));
+    const name = D.controllers.find((c) => c.key === state.ctrl).name;
+    $("pipeCaption").textContent = "Showing: " + name;
+  }
+
+  function render() {
+    const S = sc(), t = S.t, dtMin = t[1] - t[0], cw = S.charge_window;
+    const shade = [[cw[0], cw[1], "--charge"]];
+    const ser = (key, f) => D.controllers.map((c) => ({ v: f ? S.runs[c.key][key].map(f) : S.runs[c.key][key], color: CTRL_VAR[c.key], dash: CTRL_DASH[c.key] }));
+    $("scrub").max = t.length - 1;
+    const tcMax = Math.max(...D.controllers.flatMap((c) => S.runs[c.key].T_c));
+    const tcMin = Math.min(...D.controllers.flatMap((c) => S.runs[c.key].T_c));
+    const pthMax = Math.max(...D.controllers.flatMap((c) => S.runs[c.key].P_thermal)) / 1e3;
+    const energy = D.controllers.map((c) => cumulative(S.runs[c.key].P_thermal.map((p) => p / 1e3), dtMin));
+    const routeMax = Math.max(...S.P_drive, ...S.P_chg_max);
+    charts = [
+      chart($("routeChart"), { t, y: [Math.min(...S.P_drive) - 20, routeMax + 40], height: 170, look: true,
+        aria: "Route power demand and charging stop", shade,
+        series: [{ v: S.P_drive, color: "--muted", w: 1.4, nodot: false }, { v: S.P_chg_max, color: "--heat", w: 1.4, dash: "4 3", nodot: true }],
+        hline: [] }),
+      chart($("chTc"), { t, y: [Math.floor(Math.min(tcMin, 15) - 2), Math.max(52, Math.ceil(tcMax + 2))], shade, band: [18, 38],
+        aria: "Cell core temperature for three controllers",
+        series: ser("T_c"), hline: [{ v: 50, color: "--heat", label: "limit 50 °C" }] }),
+      chart($("chChg"), { t, y: [0, 800], shade, aria: "Charge power accepted", series: ser("P_chg", (p) => p / 1e3) }),
+      chart($("chPth"), { t, y: [0, Math.ceil(pthMax / 5) * 5 + 2], shade, aria: "Thermal-system power", series: ser("P_thermal", (p) => p / 1e3) }),
+      chart($("chE"), { t, y: [0, Math.ceil(Math.max(...energy.map((e) => e[e.length - 1])) + 1)], shade, aria: "Cumulative thermal energy",
+        series: D.controllers.map((c, k) => ({ v: energy[k], color: CTRL_VAR[c.key], dash: CTRL_DASH[c.key] })) }),
+    ];
+    state.energy = energy;
+    buildKpis();
+    markPressed();
+    moveAll();
+  }
+
+  function fmt(v, d) { return v.toFixed(d); }
+
+  function updateLive() {
+    const S = sc(), i = state.i, R = S.runs[state.ctrl];
+    $("sTs").textContent = fmt(R.T_s[i], 1) + " °C";
+    $("sTw").textContent = fmt(R.T_w[i], 1) + " °C";
+    $("sSoc").textContent = fmt(R.SOC[i] * 100, 1) + " %";
+    $("tCh").textContent = fmt(R.T_c_hat[i], 1) + " °C";
+    $("tC").textContent = fmt(R.T_c[i], 1) + " °C";
+    const err = R.T_c_hat[i] - R.T_c[i];
+    $("tErr").textContent = (err >= 0 ? "+" : "") + fmt(err, 2) + " K";
+    $("oPth").textContent = fmt(R.P_thermal[i] / 1e3, 2) + " kW";
+    $("oChg").textContent = fmt(R.P_chg[i] / 1e3, 0) + " kW";
+    $("oAge").textContent = fmt(R.age_rate[i], 2);
+    const ck = D.controllers.findIndex((c) => c.key === state.ctrl);
+    $("oE").textContent = fmt(state.energy[ck][i], 2) + " kWh";
+
+    const meters = [["Pump", R.u_pump[i]], ["Chiller", R.u_chill[i], true], ["Rad. valve", R.u_rv[i]], ["Fan", R.u_fan[i]], ["Heater", R.u_heat[i], true]];
+    $("meters").innerHTML = meters.map(([n, v, hot]) =>
+      `<div class="meter"><span>${n}</span><div class="trk"><div class="fill${hot && n === "Heater" ? " hot" : ""}" style="width:${(v * 100).toFixed(0)}%"></div></div><span class="v">${(v * 100).toFixed(0)}%</span></div>`).join("");
+
+    const lo = -10, hi = 55, pos = (v) => ((Math.max(lo, Math.min(hi, v)) - lo) / (hi - lo) * 100).toFixed(2) + "%";
+    const rows = [["Core, true", R.T_c[i], "--heat"], ["Core, twin est.", R.T_c_hat[i], CTRL_VAR[state.ctrl]],
+      ["Cell surface", R.T_s[i], "--muted"], ["Coolant", R.T_w[i], "--cool"], ["Ambient", S.T_amb, "--c-rule"]];
+    $("thermo").innerHTML = rows.map(([n, v, c]) =>
+      `<div class="th-row"><span>${n}</span><div class="trk"><div class="bandmark" style="left:${pos(18)};width:calc(${pos(38)} - ${pos(18)})"></div><div class="dot" style="left:${pos(v)};background:var(${c})"></div></div><span class="v">${fmt(v, 1)} °C</span></div>`).join("")
+      + `<div class="th-row"><span></span><div class="label" style="display:flex;justify-content:space-between"><span>${lo} °C</span><span>${hi} °C</span></div><span></span></div>`;
+  }
+
+  function updateRoute() {
+    const S = sc(), i = state.i, t = S.t[i];
+    const cw = S.charge_window, charging = t >= cw[0] && t <= cw[1];
+    const st = $("status");
+    st.textContent = charging ? "Charging" : (t < cw[0] ? "Driving to charger" : "Driving");
+    st.className = "status-pill" + (charging ? " charging" : "");
+    $("rmSpeed").textContent = fmt(S.v[i], 0) + " km/h";
+    $("rmPower").textContent = fmt(S.P_drive[i], 0) + " kW";
+    $("rmCharger").textContent = charging ? `connected, ${fmt(S.P_chg_max[i], 0)} kW max`
+      : t < cw[0] ? `in ${fmt(cw[0] - t, 0)} min` + (cw[0] - t <= LOOKAHEAD_MIN ? " (inside look-ahead)" : "") : "done";
+    $("clock").textContent = `t = ${fmt(t, 1)} min`;
+  }
+
+  function moveAll() {
+    charts.forEach((c) => c.move(state.i));
+    $("scrub").value = state.i;
+    updateRoute();
+    updateLive();
+  }
+
+  function buildKpis() {
+    const S = sc();
+    const rows = [
+      ["Thermal-system energy", "thermal-system energy [kWh]", "kWh", 2, -1],
+      ["  of which chiller compressor", "chiller compressor [kWh]", "kWh", 2, -1],
+      ["  of which heater", "heater [kWh]", "kWh", 2, -1],
+      ["Energy charged in the 30-min stop", "energy charged in 30-min stop [kWh]", "kWh", 1, +1],
+      ["SOC after charging", "SOC after charging [%]", "%", 1, +1],
+      ["Peak core temperature", "peak core temp [degC]", "°C", 1, -1],
+      ["Ageing index (25 °C = 1)", "ageing index [-] (1 = 25 degC)", "", 3, -1],
+      ["Core-temperature estimate error (RMSE)", "core-temp estimate RMSE [K]", "K", 2, -1],
+      ["Mean controller solve time", "mean solve time [ms]", "ms", 0, 0],
+    ];
+    const base = S.kpis.rule;
+    let h = `<thead><tr><th>KPI</th>${D.controllers.map((c) => `<th style="color:var(${CTRL_VAR[c.key]})">${c.name}</th>`).join("")}</tr></thead><tbody>`;
+    for (const [label, key, unit, dg, dir] of rows) {
+      h += `<tr><td>${label.replace(/^ {2}/, "&nbsp;&nbsp;&nbsp;")}</td>`;
+      for (const c of D.controllers) {
+        const v = S.kpis[c.key][key];
+        let chip = "";
+        if (c.key !== "rule" && dir !== 0 && Math.abs(base[key]) > 1e-6) {
+          const pct = (v - base[key]) / Math.abs(base[key]) * 100;
+          const cls = Math.abs(pct) < 0.5 ? "same" : (pct * dir > 0 ? "good" : "bad");
+          chip = `<span class="chip ${cls}">${pct >= 0 ? "+" : ""}${pct.toFixed(1)}%</span>`;
+        }
+        h += `<td class="num">${v.toFixed(dg)} ${unit}${chip}</td>`;
+      }
+      h += "</tr>";
+    }
+    $("kpiTable").innerHTML = h + "</tbody>";
+  }
+
+  function buildMl() {
+    const m = D.ml, f = m.free_run_rmse_60min;
+    $("mlN").textContent = m.n_train.toLocaleString("en-IN");
+    const avg = (o) => (o.T_s + o.T_w) / 2;
+    $("mlP").textContent = avg(f.physics).toFixed(2) + " K";
+    $("mlH").textContent = avg(f.hybrid).toFixed(2) + " K";
+    const max = Math.max(f.physics.T_s, f.physics.T_w) * 1.1;
+    const rows = [["Surface · physics", f.physics.T_s, "--c-phys"], ["Surface · hybrid AI", f.hybrid.T_s, "--c-ai"],
+      ["Coolant · physics", f.physics.T_w, "--c-phys"], ["Coolant · hybrid AI", f.hybrid.T_w, "--c-ai"]];
+    $("mlBars").innerHTML = rows.map(([n, v, c]) =>
+      `<div class="mlrow"><span>${n}</span><div class="trk"><div class="fill" style="width:${(v / max * 100).toFixed(1)}%;background:var(${c})"></div></div><span class="mono" style="text-align:right">${v.toFixed(2)}</span></div>`).join("");
+  }
+
+  // ---------- playback ----------
+  let last = 0, acc = 0;
+  const STEP_MS = 90; // one 30-s sample per frame step
+  function frame(ts) {
+    if (!state.playing) return;
+    if (last) acc += ts - last;
+    last = ts;
+    while (acc >= STEP_MS) {
+      acc -= STEP_MS;
+      state.i = (state.i + 1) % sc().t.length;
+    }
+    moveAll();
+    requestAnimationFrame(frame);
+  }
+  function togglePlay() {
+    state.playing = !state.playing;
+    $("playBtn").textContent = state.playing ? "Pause" : "Play";
+    if (state.playing) { last = 0; acc = 0; requestAnimationFrame(frame); }
+  }
+
+  if (!D) return;
+  buildControls();
+  buildMl();
+  // open just before the charging stop, where pre-conditioning is visible
+  render();
+  state.i = Math.max(0, sc().t.findIndex((v) => v >= sc().charge_window[0] - 12));
+  moveAll();
+  window.matchMedia("(prefers-color-scheme: dark)").addEventListener?.("change", render);
+  let rz;
+  window.addEventListener("resize", () => { clearTimeout(rz); rz = setTimeout(render, 150); });
+  new MutationObserver(render).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+})();
+</script>
