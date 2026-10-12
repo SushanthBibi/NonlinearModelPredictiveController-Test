@@ -1,0 +1,47 @@
+{
+  "conventional": {
+    "warm-up time to 85 degC [s]": 722.0,
+    "coolant RMS dev. from target (warm) [K]": 5.979652185948047,
+    "coolant std (warm) [K]": 5.168502243188919,
+    "oil std (warm) [K]": 8.412415569953664,
+    "peak coolant temp [degC]": 97.52264354912525,
+    "peak oil temp [degC]": 111.14702740012656,
+    "peak liner metal temp [degC]": 120.31116187426606,
+    "fan energy [kWh]": 3.591666666666667,
+    "pump energy [kWh]": 0.6290319206367169,
+    "cooling-system energy [kWh]": 4.220698587303384,
+    "friction energy [kWh]": 5.965685609124579,
+    "fuel consumed [kg]": 17.64891356620278,
+    "time above coolant limit [s]": 0.0
+  },
+  "PI": {
+    "warm-up time to 85 degC [s]": 552.0,
+    "coolant RMS dev. from target (warm) [K]": 2.31121149067875,
+    "coolant std (warm) [K]": 2.12731376092432,
+    "oil std (warm) [K]": 5.062372282888961,
+    "peak coolant temp [degC]": 97.28544231244224,
+    "peak oil temp [degC]": 109.01350293360922,
+    "peak liner metal temp [degC]": 113.10145823551859,
+    "fan energy [kWh]": 0.8604669642882679,
+    "pump energy [kWh]": 0.5336690943885936,
+    "cooling-system energy [kWh]": 1.3941360586768614,
+    "friction energy [kWh]": 5.861187732060442,
+    "fuel consumed [kg]": 17.140957800823173,
+    "time above coolant limit [s]": 0.0
+  },
+  "NMPC": {
+    "warm-up time to 85 degC [s]": 553.0,
+    "coolant RMS dev. from target (warm) [K]": 3.9071787015934865,
+    "coolant std (warm) [K]": 3.2972694284160062,
+    "oil std (warm) [K]": 5.431381442718796,
+    "peak coolant temp [degC]": 101.25223393330667,
+    "peak oil temp [degC]": 113.33151393243467,
+    "peak liner metal temp [degC]": 128.62522795204282,
+    "fan energy [kWh]": 0.20356111113996225,
+    "pump energy [kWh]": 0.30451548486511726,
+    "cooling-system energy [kWh]": 0.5080765960050795,
+    "friction energy [kWh]": 5.81990233754521,
+    "fuel consumed [kg]": 16.977348653849692,
+    "time above coolant limit [s]": 0.0
+  }
+}
