@@ -1,6 +1,7 @@
 # Predictive Thermal Management for Heavy-Duty Trucks (NMPC)
 
-This repository holds two applications of the same NMPC approach:
+This repository holds two applications of the same NMPC approach, in Python and in
+MATLAB/Simulink (`matlab/`, see [matlab/README.md](matlab/README.md)):
 
 1. **`battery_twin/`: AI-enabled digital twin for an electric truck's battery**
    (entry for the VIT × ISHRAE *AI for Thermal Management: Digital Twin Challenge*,
